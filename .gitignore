@@ -1,0 +1,51 @@
+# Bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Environment / secrets
+.env
+.env.example
+*.key
+secret.key
+direct_burn/secret.py
+
+# Test artifacts
+*.log
+_test_output/
+test_*.py
+_test*.py
+
+# Remote burn artifacts (only at project root — scripts/ templates ARE committed)
+/*_fpga.bit
+/*_run_hw.bat
+/*_hw_server_exec_log.txt
+
+# pytest
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml

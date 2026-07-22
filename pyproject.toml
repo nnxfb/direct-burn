@@ -1,0 +1,50 @@
+[project]
+name = "direct-burn"
+version = "1.0.0"
+description = "免登录 FPGA 远程烧录工具 — 从原应用提取核心烧录链路，剥离认证和状态管理"
+requires-python = ">=3.9"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "pentest-team"},
+]
+keywords = ["fpga", "vivado", "jtag", "remote-burning", "xilinx"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Hardware",
+]
+
+dependencies = [
+    "paramiko>=3.0.0",
+    "pymysql>=1.0.0",
+]
+
+[project.optional-dependencies]
+crypto = ["cryptography>=41.0.0"]
+monitor = ["pyserial>=3.5"]
+verify = ["websockets>=12.0"]
+full = ["direct-burn[crypto,monitor,verify]"]
+
+[project.scripts]
+direct-burn = "direct_burn:main"
+
+[project.urls]
+Repository = "https://github.com/example/direct-burn"
+Issues = "https://github.com/example/direct-burn/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.mypy]
+python_version = "3.9"
+ignore_missing_imports = true
