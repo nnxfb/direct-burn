@@ -4,16 +4,15 @@ import os
 
 import paramiko
 
-from .config import REMOTE_TEMP, _TEMPLATE_DIR, get_ssh_default_config
+from .config import REMOTE_TEMP, SCRIPT_DIR, get_ssh_default_config
 
 
 class SshSession:
-    """SSH 会话封装 — 支持上下文管理器."""
+    """SSH 会话封装"""
 
-    def __init__(self, host, port=None, username=None, password=None):
-        _port, _user, _pass = get_ssh_default_config()
+    def __init__(self, host, username=None, password=None):
+        _user, _pass = get_ssh_default_config()
         self.host = host
-        self.port = port or _port
         self.username = username or _user
         self.password = password or _pass
         self._ssh = None
@@ -23,25 +22,28 @@ class SshSession:
         self._ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self._ssh.connect(
             hostname=self.host,
-            port=self.port,
+            port=22,
             username=self.username,
             password=self.password,
             timeout=15,
             look_for_keys=False,
             allow_agent=False,
         )
-        print(f'[+] SSH 已连接: {self.username}@{self.host}:{self.port}')
+        print(f'[+] SSH 已连接: {self.username}@{self.host}:{22}')
 
-    def exec(self, cmd, timeout=30):
-        """执行命令, 返回 (stdout, stderr, exit_code)."""
-        print('cmd >', cmd)
+    def exec(self, cmd: str, timeout=30):
+        """执行命令, 返回 (stdout, stderr, exit_code)"""
+        # print('cmd >', cmd)
         stdin, stdout, stderr = self._ssh.exec_command(cmd, timeout=timeout)
         out = stdout.read().decode(errors='replace')
         err = stderr.read().decode(errors='replace')
         exit_code = stdout.channel.recv_exit_status()
         return out, err, exit_code
+    
+    def exec_bg(self, cmd: str):
+        self._ssh.exec_command(cmd)
 
-    def sftp_put(self, local_path, remote_path):
+    def upload(self, local_path: str, remote_path: str):
         sftp = self._ssh.open_sftp()
         sftp.put(local_path, remote_path)
         sftp.close()
@@ -49,7 +51,7 @@ class SshSession:
     def close(self):
         if self._ssh:
             self._ssh.close()
-        print(f'[+] SSH 连接已断开: {self.username}@{self.host}:{self.port}')
+        print(f'[+] SSH 连接已断开: {self.username}@{self.host}:{22}')
 
     def __enter__(self):
         self.connect()
@@ -59,20 +61,15 @@ class SshSession:
         self.close()
 
 
-def deploy_ps1_scripts(ssh: SshSession):
+def deploy_scripts(ssh: SshSession):
     """上传 template/*.ps1 到远程 REMOTE_TEMP."""
-    # 确保远程目录存在
-    ssh.exec(
-        f'powershell -Command "New-Item -ItemType Directory '
-        f"-Path '{REMOTE_TEMP}' -Force | Out-Null\""
-    )
+    
+    ssh.exec(f'powershell -Command "New-Item -ItemType Directory -Path \'{REMOTE_TEMP}\' -Force | Out-Null"')
 
-    for fname in os.listdir(_TEMPLATE_DIR):
-        if not fname.endswith('.ps1'):
-            continue
+    for fname in os.listdir(SCRIPT_DIR):
 
-        local_path = f'{_TEMPLATE_DIR}/{fname}'
+        local_path = f'{SCRIPT_DIR}/{fname}'
         remote_path = f'{REMOTE_TEMP}/{fname}'
 
-        print(f'[+] 部署 {local_path} → {remote_path}')
-        ssh.sftp_put(local_path, remote_path)
+        print(f'[+] 上传 {fname:<20} -> {remote_path}')
+        ssh.upload(local_path, remote_path)

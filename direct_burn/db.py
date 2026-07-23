@@ -6,22 +6,22 @@ import pymysql
 from .config import get_db_default_config
 
 
-def get_db_connection(host=None, port=None, user=None, password=None):
-    _host, _port, _user, _password = get_db_default_config()
+def get_db_connection():
+    _host, _port, _user, _password, _name = get_db_default_config()
     return pymysql.connect(
-        host=host or _host,
-        port=port or _port,
-        user=user or _user,
-        password=password if password is not None else _password,
-        database='port_manager',
+        host=_host,
+        port=_port,
+        user=_user,
+        password=_password,
+        database=_name,
         charset='utf8mb4',
         autocommit=True,
     )
 
 
-def list_all_fpga(db_host, db_port=None, db_user=None, db_password=None):
+def list_all_fpga():
     """列出全部 FPGA 设备."""
-    conn = get_db_connection(host=db_host, port=db_port, user=db_user, password=db_password)
+    conn = get_db_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
             cursor.execute("""
@@ -35,9 +35,9 @@ def list_all_fpga(db_host, db_port=None, db_user=None, db_password=None):
         conn.close()
 
 
-def list_available_fpga(db_host, db_password=None):
+def list_available_fpga():
     """列出空闲 FPGA 设备."""
-    conn = get_db_connection(host=db_host, password=db_password)
+    conn = get_db_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
             cursor.execute("""
@@ -52,9 +52,9 @@ def list_available_fpga(db_host, db_password=None):
         conn.close()
 
 
-def query_fpga_by_name(db_host, fpga_name, db_password=None):
-    """按名称查询 FPGA."""
-    conn = get_db_connection(host=db_host, password=db_password)
+def query_fpga_by_name(fpga_name):
+    """按名称查询 FPGA"""
+    conn = get_db_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
             cursor.execute('SELECT * FROM fpga_boards WHERE fpga_name = %s', (fpga_name,))
@@ -64,9 +64,9 @@ def query_fpga_by_name(db_host, fpga_name, db_password=None):
         conn.close()
 
 
-def query_fpga_by_jtag(db_host, jtag_filter, db_password=None):
-    """按 JTAG 查询 FPGA."""
-    conn = get_db_connection(host=db_host, password=db_password)
+def query_fpga_by_jtag(jtag_filter):
+    """按 JTAG 查询 FPGA"""
+    conn = get_db_connection()
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
             cursor.execute('SELECT * FROM fpga_boards WHERE jtag_filter = %s', (jtag_filter,))
@@ -77,41 +77,33 @@ def query_fpga_by_jtag(db_host, jtag_filter, db_password=None):
 
 
 class FpgaLock:
-    """FPGA 板卡互斥锁 — 支持上下文管理器.
+    """FPGA 板卡互斥锁
 
     Usage:
-        with FpgaLock('FPGA11', db_host, db_pass) as lock:
+        with FpgaLock('FPGA11') as lock:
             # 烧录逻辑...
     """
 
-    def __init__(self, fpga_name, db_host, db_password=None, heartbeat_interval=45):
+    def __init__(self, fpga_name, heartbeat_interval=45):
         self.fpga_name = fpga_name
-        self.db_host = db_host
-        self.db_password = db_password
         self.heartbeat_interval = heartbeat_interval
         self._heartbeat_stop = None
 
     def acquire_fpga(self):
-        conn = get_db_connection(host=self.db_host, password=self.db_password)
+        conn = get_db_connection()
         try:
             with conn.cursor() as cursor:
-                cursor.execute(
-                    "UPDATE fpga_boards SET status = 'in_use' WHERE fpga_name = %s",
-                    (self.fpga_name,),
-                )
+                cursor.execute("UPDATE fpga_boards SET status = 'in_use' WHERE fpga_name = %s", (self.fpga_name,))
             conn.commit()
             return cursor.rowcount > 0
         finally:
             conn.close()
 
     def release_fpga(self):
-        conn = get_db_connection(host=self.db_host, password=self.db_password)
+        conn = get_db_connection()
         try:
             with conn.cursor() as cursor:
-                cursor.execute(
-                    "UPDATE fpga_boards SET status = 'available' WHERE fpga_name = %s",
-                    (self.fpga_name,),
-                )
+                cursor.execute("UPDATE fpga_boards SET status = 'available' WHERE fpga_name = %s", (self.fpga_name,))
             conn.commit()
             return cursor.rowcount > 0
         finally:
@@ -134,16 +126,13 @@ class FpgaLock:
         return False
 
     def _update_heartbeat(self):
-        conn = get_db_connection(host=self.db_host, password=self.db_password)
+        conn = get_db_connection()
         try:
             with conn.cursor() as cursor:
-                cursor.execute(
-                    "UPDATE fpga_boards SET last_heartbeat = NOW() WHERE fpga_name = %s",
-                    (self.fpga_name,),
-                )
+                cursor.execute("UPDATE fpga_boards SET last_heartbeat = NOW() WHERE fpga_name = %s", (self.fpga_name,))
             conn.commit()
-        except Exception:
-            pass
+        except Exception as e:
+            print('[!] 心跳更新失败', e)
         finally:
             conn.close()
 

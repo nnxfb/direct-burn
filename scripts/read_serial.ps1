@@ -5,7 +5,7 @@ param(
 )
 
 # .NET System.IO.Ports.SerialPort — 主动查询 FPGA 状态
-# 协议: 发送 0x80 → 读取 18 字节 LE 响应 → 输出 hex 行
+# 协议: 发送 0x80 -> 读取 18 字节 LE 响应 -> 输出 hex 行
 # 每行 18 个空格分隔的 hex 字节, 最后一行 "DONE"
 
 $port = New-Object System.IO.Ports.SerialPort $ComPort, $BaudRate, 'None', 8, 'One'

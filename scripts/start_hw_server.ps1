@@ -1,11 +1,18 @@
-param($Port, $Jtag, $TempDir, $HwServerBat)
+param(
+    $Port,
+    $Jtag,
+    $TempDir,
+    $HwServerBat
+)
 
-$logPath = "${TempDir}\${Jtag}_hw_server_exec_log.txt"
-$batPath = "${TempDir}\${Jtag}_run_hw.bat"
+$logPath = "${TempDir}/${Jtag}_hw_server_exec_log.txt"
+$batPath = "${TempDir}/${Jtag}_run_hw.bat"
 
 function Write-Log {
     param([string]$msg)
-    "$((Get-Date).ToString('yyyy-MM-dd HH:mm:ss')) - $msg" | Out-File $logPath -Append
+    $line = "$((Get-Date).ToString('yyyy-MM-dd HH:mm:ss')) - $msg" 
+    $line | Out-File $logPath -Append
+    Write-Output $line
 }
 
 # 1. kill any existing process on the target port

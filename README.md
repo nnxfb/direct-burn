@@ -134,16 +134,16 @@ direct_burn.py                      # CLI 鍏ュ彛
 鈹?  鈹溾攢鈹€ query_fpga_by_name()        # 鎸夊悕绉版煡璇?鈹?  鈹斺攢鈹€ FpgaLock                    # 浜掓枼閿?+ 蹇冭烦涓婁笅鏂囩鐞嗗櫒
 鈹?鈹溾攢鈹€ direct_burn/ssh.py              # SSH 杩滅▼鎿嶄綔
 鈹?  鈹溾攢鈹€ SshSession                  # SSH 杩炴帴灏佽 (paramiko)
-鈹?  鈹斺攢鈹€ deploy_ps1_scripts()        # 閮ㄧ讲 PS1 鍒?C:\Temp\hw_script
+鈹?  鈹斺攢鈹€ deploy_scripts()        # 閮ㄧ讲 PS1 鍒?C:\Temp\hw_script
 鈹?鈹溾攢鈹€ direct_burn/hw_server.py        # JTAG 妗ョ鐞?鈹?  鈹溾攢鈹€ HwServerSession             # hw_server 涓婁笅鏂囩鐞嗗櫒 (鑷姩鍥炴敹)
-鈹?  鈹斺攢鈹€ wait_for_hw_server()        # Socket 绔彛杞
+鈹?  鈹斺攢鈹€ _wait_for_hw_server()        # Socket 绔彛杞
 鈹?鈹溾攢鈹€ direct_burn/vivado.py           # FPGA 鐑у綍
 鈹?  鈹斺攢鈹€ run_vivado_burn()           # SFTP + TCL + Vivado 鎵ц
 鈹?鈹溾攢鈹€ direct_burn/monitor.py          # 涓插彛鐩戞帶
-鈹?  鈹斺攢鈹€ remote_serial_monitor_direct()  # SSH 杩滅▼涓插彛鐩磋
+鈹?  鈹斺攢鈹€ remote_serial_monitor()  # SSH 杩滅▼涓插彛鐩磋
 鈹?鈹斺攢鈹€ direct_burn/serial.py           # 鍗忚瑙ｆ瀽 (鍏变韩)
     鈹溾攢鈹€ SEGMENT_MAP                 # 7 娈垫暟鐮佺鏄犲皠
-    鈹溾攢鈹€ parse_18byte_frame()        # 18-byte LE 甯цВ鏋?    鈹斺攢鈹€ parse_seg_display()         # 鏁扮爜绠¤В鐮?```
+    鈹溾攢鈹€ parse_data_frame()        # 18-byte LE 甯цВ鏋?    鈹斺攢鈹€ parse_seg_display()         # 鏁扮爜绠¤В鐮?```
 
 ## 鐑у綍娴佺▼
 
