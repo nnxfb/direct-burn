@@ -24,6 +24,12 @@ from direct_burn.ssh import SshSession, deploy_scripts
 from direct_burn.hw_server import HwServerSession, run_vivado_burn
 from direct_burn.monitor import remote_serial_monitor
 
+def format_fpga_info(entry) -> str:
+    info = (
+        f'{entry["fpga_name"]:<8}{entry["IP"]:<16}{entry["total_port"]:<6}{entry["jtag_filter"]:<14}{entry["com_name"]:<8}'
+        f'{entry["vcom_name"]:<6}{entry["status"]:<12}{entry["last_heartbeat"].strftime("%Y-%m-%d %H:%M:%S"):<20}'
+    )
+    return info
 
 def print_fpga_list(rows):
     """格式化打印 FPGA 设备列表."""
@@ -31,11 +37,11 @@ def print_fpga_list(rows):
         print('[!] 没有可用设备')
         return
 
-    header = f'{"FPGA Name":<10}{"IP":<16}{"Port":<8}{"JTAG":<16}{"COM":<8}{"VCOM":<8}{"Status":<12}'
+    header = f'{"FPGA":<8}{"IP":<16}{"Port":<6}{"JTAG":<14}{"COM":<8}{"VCOM":<6}{"Status":<12}{"Last":<20}'
     print(f'{header}')
     print('-' * len(header))
     for r in rows:
-        print(f'{r["fpga_name"]:<10}{r["IP"]:<16}{r["total_port"]:<8}{r["jtag_filter"]:<16}{r["com_name"]:<8}{r["vcom_name"]:<8}{r["status"]:<12}')
+        print((format_fpga_info(r)))
     print(f'\n共 {len(rows)} 台设备')
 
 
@@ -107,8 +113,6 @@ def main():
         sys.exit(1)
 
     print(f'\n{"="*60}')
-    print(f'设备信息')
-    print(f'{"="*60}')
     for key in ['fpga_name', 'IP', 'total_port', 'jtag_filter', 'com_name', 'vcom_name', 'result']:
         print(f'{key:<16}: {fpga_info.get(key, "N/A")}')
     print(f'{"="*60}')
@@ -120,24 +124,33 @@ def main():
     fpga_name   = fpga_info['fpga_name']
     success = False
 
+    with SshSession(server_ip) as ssh:
+        out, _, _ = ssh.exec('powershell -Command "[System.IO.Ports.SerialPort]::GetPortNames()"')
+        com_list = out.splitlines()
+    if com_name not in com_list:
+        print(f'[!] {com_name} 已下线！')
+        sys.exit(1)
+    else:
+        print(f'[+] {com_name} 存在！')
+
     try:
         with FpgaLock(fpga_name):
-            print(f'\n{"="*60}')
+            print(f'{"="*60}')
             print(f'开始烧录: {jtag}')
             print(f'Bit 文件: {args.bit}')
             print(f'目标主机: {server_ip}')
             print(f'{"="*60}')
 
-            with SshSession(server_ip, username=ssh_user, password=ssh_pass) as ssh:
-                print(f'\n[Step 1/4] 部署远程脚本...')
+            with SshSession(server_ip) as ssh:
+                print(f'[1/3] 部署远程脚本...')
                 deploy_scripts(ssh)
 
-                print(f'\n[Step 2/4] 启动 hw_server 并烧录...')
+                print(f'[2/3] 启动 hw_server 并烧录...')
                 with HwServerSession(ssh, server_ip, vivado_port, jtag):
                     success = run_vivado_burn(ssh, server_ip, vivado_port, args.bit, jtag)
                
                 if success:
-                    print(f'\n[Step 3/4] 远程串口直读 ({com_name}, {args.monitor_duration}s)...')
+                    print(f'[3/3] 读取远程串口 ({com_name}, {args.monitor_duration}s)...')
                     remote_serial_monitor(ssh, com_name, duration=args.monitor_duration)
 
     except RuntimeError as e:

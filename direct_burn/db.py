@@ -30,6 +30,7 @@ def list_all_fpga():
                 ORDER BY CAST(SUBSTRING(fpga_name, 5) AS UNSIGNED)
             """)
             rows = cursor.fetchall()
+        print(rows[0])
         return rows
     finally:
         conn.close()

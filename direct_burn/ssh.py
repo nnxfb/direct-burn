@@ -10,11 +10,11 @@ from .config import REMOTE_TEMP, SCRIPT_DIR, get_ssh_default_config
 class SshSession:
     """SSH 会话封装"""
 
-    def __init__(self, host, username=None, password=None):
+    def __init__(self, host):
         _user, _pass = get_ssh_default_config()
         self.host = host
-        self.username = username or _user
-        self.password = password or _pass
+        self.username = _user
+        self.password = _pass
         self._ssh = None
 
     def connect(self):
@@ -51,7 +51,7 @@ class SshSession:
     def close(self):
         if self._ssh:
             self._ssh.close()
-        print(f'[+] SSH 连接已断开: {self.username}@{self.host}:{22}')
+        print(f'[+] SSH 已断开: {self.username}@{self.host}:{22}')
 
     def __enter__(self):
         self.connect()

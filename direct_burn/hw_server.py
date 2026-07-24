@@ -6,9 +6,11 @@ import socket
 from .config import HW_SERVER_BAT, REMOTE_TEMP, VIVADO_BAT
 from .ssh import SshSession
 
+CACHED_BITFILE = None
+CACHED_BITFILE = 'C:/Temp/hw_script/top.bit'
 
 class HwServerSession:
-    """hw_server 上下文管理器 — __exit__ 保证进程回收.
+    """hw_server 上下文
 
     Usage:
         with HwServerSession(ssh, ip, port, jtag) as hw:
@@ -21,6 +23,7 @@ class HwServerSession:
         self._ip = ip
         self._port = port
         self._jtag = jtag
+        self._pid = None
         self._timeout = timeout
 
     def __enter__(self):
@@ -52,20 +55,26 @@ class HwServerSession:
 
     def _kill(self):
         """Kill hw_server by port."""
-        print(f'\n[+] 停止 hw_server: port={self._port}')
-        out, _, _ = self._ssh.exec(f'powershell -ExecutionPolicy Bypass -File "{REMOTE_TEMP}/kill_port_admin.ps1" -Port {self._port}')
-        if out.strip():
-            print(f'{out.strip()}')
+        print(f'\n[+] 停止 hw_server: port={self._port} pid={self._pid}')
+
+        for pid in self._pid:
+            out, _, _ = self._ssh.exec(f'taskkill /f /pid {pid}')
+            if out.strip():
+                print(f'[+] {out.strip()}')
 
     def _wait_for_hw_server(self):
-        """轮询等待 hw_server 端口就绪."""
+        """轮询等待 hw_server 就绪"""
         print(f'\n[+] 等待 hw_server {self._ip}:{self._port} (timeout={self._timeout}s)')
         start = time.time()
         while time.time() - start < self._timeout:
             try:
                 with socket.create_connection((self._ip, self._port), timeout=2):
                     elapsed = int(time.time() - start)
-                    print(f'[+] hw_server 已就绪 ({elapsed}s)')
+
+                    out, _, _ = self._ssh.exec(f'powershell -Command "(Get-NetTCPConnection -LocalPort {self._port} -ErrorAction SilentlyContinue).OwningProcess')
+                    self._pid = set(out.splitlines())
+
+                    print(f'[+] hw_server 已就绪 (pid = {self._pid})')
                     return True
             except (socket.timeout, ConnectionRefusedError, OSError):
                 elapsed = int(time.time() - start)
@@ -88,14 +97,20 @@ def run_vivado_burn(ssh: SshSession, ip: str, port: int, local_bitfile: str, jta
     remote_tcl = f'{REMOTE_TEMP}/auto_program.tcl'
 
     # 1. SFTP 上传 bit 文件
-    print(f'[+] 上传 {local_bitfile:<20} -> {remote_bit}')
-    ssh.upload(local_bitfile, remote_bit)
+    if CACHED_BITFILE:
+        remote_bit = CACHED_BITFILE
+    else:
+        print(f'[+] 上传 {local_bitfile:<20} -> {remote_bit}')
+        ssh.upload(local_bitfile, remote_bit)
 
     # 2. 执行 Vivado
     cmd = (f'"{vivado_path}" -mode batch -source "{remote_tcl}" -tclargs "{ip}" "{port}" "{remote_bit}"')
-    print(f'[+] {cmd}')
-    _, err, exit_code = ssh.exec(cmd, timeout=120)
+    print(f'[>] {cmd}')
+    out, err, exit_code = ssh.exec(cmd, timeout=120)
 
+    print('='*60)
+    print(out)
+    print('='*60)
     if err.strip():
         print(f'[!] Vivado stderr:')
         print(f'[!] {err.strip()}')
